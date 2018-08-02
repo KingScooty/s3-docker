@@ -1,0 +1,32 @@
+version: "3.6"
+services:
+  localstack-s3:
+    image: localstack/localstack
+    environment:
+      - SERVICES=s3
+      - DEFAULT_REGION=eu-west-1
+      - HOSTNAME=localstack-s3
+    ports:
+      - 5333:4572
+
+  createbucket:
+    depends_on: 
+      - localstack-s3
+    image: garland/aws-cli-docker
+    links:
+      - localstack-s3
+    environment:
+      - AWS_ACCESS_KEY_ID=TEST
+      - AWS_SECRET_ACCESS_KEY=TEST
+    volumes:
+      - ./data:/data
+    command: >
+      /bin/sh -c "
+        while ! wget -q --spider http://localstack-s3:4572; do sleep 1; done;
+        aws s3api create-bucket \
+          --endpoint-url=http://localstack-s3:4572 \
+          --bucket replatform;
+        aws s3 cp /data/file1.csv s3://replatform \
+          --endpoint-url=http://localstack-s3:4572;
+        exit 0;
+      "
